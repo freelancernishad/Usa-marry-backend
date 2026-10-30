@@ -1,0 +1,68 @@
+name: Security Anti-Malware Guard
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+jobs:
+  scan-malware:
+    name: Scan Repository for Malware & Unauthorized Injections
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Malware & Injection Detection Check
+        run: |
+          echo "=== Running Security Anti-Malware Guard ==="
+          FAILED=0
+
+          # 1. Check for api.js or suspicious files
+          if find . -maxdepth 5 -not -path "*/node_modules/*" -not -path "*/.git/*" -name "api.js" | grep -q .; then
+            echo "❌ CRITICAL SECURITY ERROR: Malware file 'api.js' detected in repository!"
+            find . -maxdepth 5 -not -path "*/node_modules/*" -not -path "*/.git/*" -name "api.js"
+            FAILED=1
+          fi
+
+          # 2. Check for dropper scripts
+          if [ -f "branch_structure.json" ] || [ -f "temp_auto_push.bat" ] || [ -f "temp_interactive_push.bat" ]; then
+            echo "❌ CRITICAL SECURITY ERROR: Suspicious dropper file detected (branch_structure.json / temp_auto_push.bat)!"
+            FAILED=1
+          fi
+
+          # 3. Check package.json scripts for node api.js or api.js calls
+          if grep -rn --exclude-dir={node_modules,.git,.github} "node api.js" . || \
+             grep -rn --exclude-dir={node_modules,.git,.github} "api\.js" ./package.json 2>/dev/null; then
+            echo "❌ CRITICAL SECURITY ERROR: 'node api.js' found in project configuration or package.json scripts!"
+            FAILED=1
+          fi
+
+          # 4. Check for obfuscated malware signatures (global['!'], global.i =, crypto-drainer, etc.)
+          if grep -rn --exclude-dir={node_modules,.git,.github,.next,dist,build} "global\['\!'\]" . 2>/dev/null || \
+             grep -rn --exclude-dir={node_modules,.git,.github,.next,dist,build} 'global\["!"\]' . 2>/dev/null || \
+             grep -rn --exclude-dir={node_modules,.git,.github,.next,dist,build} 'global\["\\x21"\]' . 2>/dev/null || \
+             grep -rn --exclude-dir={node_modules,.git,.github,.next,dist,build} "global\.i[[:space:]]*=" . 2>/dev/null || \
+             grep -rn --exclude-dir={node_modules,.git,.github,.next,dist,build} "rv\$mIJCKYxZ" . 2>/dev/null || \
+             grep -rn --exclude-dir={node_modules,.git,.github,.next,dist,build} "118\.107\.135" . 2>/dev/null || \
+             grep -rn --exclude-dir={node_modules,.git,.github,.next,dist,build} '\\u006C\\u0065\\u006E\\u0067\\u0074\\u0068' . 2>/dev/null || \
+             grep -rn --exclude-dir={node_modules,.git,.github,.next,dist,build} '\\x61\\x70\\x69' . 2>/dev/null; then
+            echo "❌ CRITICAL SECURITY ERROR: Obfuscated malware signature detected in repository files!"
+            FAILED=1
+          fi
+
+          # 5. Check config files specifically for forbidden patterns (fromCharCode, edon, hidden tabs)
+          for cfg in $(find . -maxdepth 3 -not -path "*/node_modules/*" -not -path "*/.git/*" -type f \( -name "*config*" -o -name "*rc*" \)); do
+            if grep -E "(fromCharCode|edon|	{5,})" "$cfg" > /dev/null 2>&1; then
+              echo "❌ CRITICAL SECURITY ERROR: Malicious or obfuscated code detected in config file: $cfg"
+              FAILED=1
+            fi
+          done
+
+          if [ $FAILED -ne 0 ]; then
+            echo "Security check failed. Please remove unauthorized injections and purge malware."
+            exit 1
+          fi
+
+          echo "✅ Repository passed all Anti-Malware Security checks."
