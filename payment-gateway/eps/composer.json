@@ -1,0 +1,19 @@
+{
+    "name": "payment-gateway/eps",
+    "description": "EPS (Easy Payment System) Payment Gateway for Laravel",
+    "type": "library",
+    "license": "proprietary",
+    "autoload": {
+        "psr-4": {
+            "PaymentGateway\\EPS\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "PaymentGateway\\EPS\\Providers\\EpsServiceProvider"
+            ]
+        }
+    }
+}
+

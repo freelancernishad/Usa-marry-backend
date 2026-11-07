@@ -18,13 +18,18 @@ class ApiResponse
      */
     public function handle(Request $request, Closure $next)
     {
-        // Skip ApiResponse middleware for the /files/{path} route
-        if ($request->is('files/*') || $request->is('sslcommerz/example1') || $request->is('sslcommerz/example2') || $request->is('admin/login-logs*')) {
+        // Skip ApiResponse middleware for non-API routes, webhooks, and redirects
+        if ($request->is('files/*') || $request->is('sslcommerz/example1') || $request->is('sslcommerz/example2') || $request->is('admin/login-logs*') || $request->is('eps/*')) {
             return $next($request);
         }
 
         // Capture the response
         $response = $next($request);
+
+        // Do not intercept HTTP redirects (301, 302, 303, 307, 308)
+        if ($response->isRedirection()) {
+            return $response;
+        }
 
         // Check if the response is a valid Response object
         if ($response instanceof Response) {

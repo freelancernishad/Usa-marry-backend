@@ -28,7 +28,8 @@
         "psr-4": {
             "App\\": "app/",
             "Database\\Factories\\": "database/factories/",
-            "Database\\Seeders\\": "database/seeders/"
+            "Database\\Seeders\\": "database/seeders/",
+            "PaymentGateway\\EPS\\": "payment-gateway/eps/src/"
         },
         "files": [
             "app/Helpers/functions.php",
@@ -68,7 +69,10 @@
     },
     "extra": {
         "laravel": {
-            "dont-discover": []
+            "dont-discover": [],
+            "providers": [
+                "PaymentGateway\\EPS\\Providers\\EpsServiceProvider"
+            ]
         }
     },
     "config": {
